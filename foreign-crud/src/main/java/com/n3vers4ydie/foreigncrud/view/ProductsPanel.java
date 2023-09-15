@@ -424,7 +424,7 @@ public class ProductsPanel extends javax.swing.JPanel {
     txtFilter.setFont(new java.awt.Font("Segoe UI", 0, 16)); // NOI18N
 
     lbl6.setFont(new java.awt.Font("Segoe UI", 0, 16)); // NOI18N
-    lbl6.setText("filter");
+    lbl6.setText("filter by name");
 
     tglFilter.setIcon(new javax.swing.ImageIcon(getClass().getResource("/filter.png"))); // NOI18N
     tglFilter.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
