@@ -8,7 +8,7 @@ Enter your database login credentials in the required fields and click on the `L
 
 ![Login](./readme/login.png)
 
-> [!INFO]
+> [!NOTE]
 > The default username is `root` and the password is empty, but if you have changed it, enter your credentials.
 
 ## Dir Structure
