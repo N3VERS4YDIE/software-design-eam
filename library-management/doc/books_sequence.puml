@@ -1,0 +1,75 @@
+title Books
+
+actor User #LightYellow
+boundary GUI #LightPink
+control System #LightBlue
+entity DB #LightGreen
+
+== Add Book ==
+User --> GUI: Enter book information
+activate User #LightYellow
+User -> GUI: Select add option
+deactivate User #LightYellow
+GUI --> System: Communicate selection event
+activate GUI #LightPink
+activate System #LightBlue
+GUI -> System: Send information
+alt
+    System -> DB: Add book
+    activate DB #LightGreen
+    DB --> System: Return result
+    deactivate DB #LightGreen
+    System --> GUI: Show successful addition message
+else If book already exists
+    System --> GUI: Show book already exists message
+else If data is invalid
+    System --> GUI: Show invalid data message
+    deactivate System #LightBlue
+    deactivate GUI #LightPink
+end
+
+== Update Book ==
+User --> GUI: Enter book information
+activate User #LightYellow
+User -> GUI: Select update option
+deactivate User #LightYellow
+GUI --> System: Communicate selection event
+activate GUI #LightPink
+activate System #LightBlue
+GUI -> System: Send information
+alt
+    System -> DB: Update book
+    activate DB #LightGreen
+    DB --> System: Return result
+    deactivate DB #LightGreen
+    System --> GUI: Show successful update message
+else If book does not exist
+    System --> GUI: Show book does not exist message
+else If data is invalid
+    System --> GUI: Show invalid data message
+    deactivate System #LightBlue
+    deactivate GUI #LightPink
+end
+
+== Delete Book ==
+User --> GUI: Enter book information
+activate User #LightYellow
+User -> GUI: Select delete option
+deactivate User #LightYellow
+GUI --> System: Communicate selection event
+activate GUI #LightPink
+activate System #LightBlue
+GUI -> System: Send information
+alt
+    System -> DB: Delete book
+    activate DB #LightGreen
+    DB --> System: Return result
+    deactivate DB #LightGreen
+    System --> GUI: Show successful deletion message
+else If book does not exist
+    System --> GUI: Show book does not exist message
+else If data is invalid
+    System --> GUI: Show invalid data message
+    deactivate System #LightBlue
+    deactivate GUI #LightPink
+end

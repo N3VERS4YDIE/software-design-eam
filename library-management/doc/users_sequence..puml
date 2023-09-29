@@ -1,0 +1,122 @@
+title Users
+
+actor User #LightYellow
+boundary GUI #LightPink
+control System #LightBlue
+entity DB #LightGreen
+
+== Login User ==
+User --> GUI: Enter user credentials
+activate User #LightYellow
+User -> GUI: Select login option
+deactivate User #LightYellow
+activate GUI #LightPink
+GUI --> System: Communicate selection event
+activate System #LightBlue
+GUI -> System: Send credentials
+alt
+    System -> DB: Login user
+    activate DB #LightGreen
+    DB --> System: Return result
+    deactivate DB #LightGreen
+    System --> GUI: Show Main View
+else If user does not exist
+    System --> GUI: Show user does not exist message
+else If credentials are incorrect
+    System --> GUI: Show incorrect credentials message
+    deactivate System #LightBlue
+    deactivate GUI #LightPink
+end
+
+== Register User ==
+User -> GUI: Select register option
+activate User #LightYellow
+activate GUI #LightPink
+GUI -> System: Communicate selection event
+activate System #LightBlue
+System --> GUI: Show registration form
+User -> GUI: Enter user information
+deactivate User #LightYellow
+GUI -> System: Send information
+alt
+    System -> DB: Register user
+    activate DB #LightGreen
+    DB --> System: Return result
+    deactivate DB #LightGreen
+    System --> GUI: Show successful registration message
+else If user already exists
+    System --> GUI: Show user already exists message
+else If data is invalid
+    System --> GUI: Show invalid data message
+    deactivate System #LightBlue
+    deactivate GUI #LightPink
+end
+
+== Add User ==
+User --> GUI: Enter user information
+activate User #LightYellow
+User -> GUI: Select add option
+deactivate User #LightYellow
+GUI --> System: Communicate selection event
+activate GUI #LightPink
+activate System #LightBlue
+GUI -> System: Send information
+alt
+    System -> DB: Add user
+    activate DB #LightGreen
+    DB --> System: Return result
+    deactivate DB #LightGreen
+    System --> GUI: Show successful addition message
+else If user already exists
+    System --> GUI: Show user already exists message
+else If data is invalid
+    System --> GUI: Show invalid data message
+    deactivate System #LightBlue
+    deactivate GUI #LightPink
+end
+
+== Update User ==
+User --> GUI: Enter user information
+activate User #LightYellow
+User -> GUI: Select update option
+deactivate User #LightYellow
+GUI --> System: Communicate selection event
+activate GUI #LightPink
+activate System #LightBlue
+GUI -> System: Send information
+alt
+    System -> DB: Update user
+    activate DB #LightGreen
+    DB --> System: Return result
+    deactivate DB #LightGreen
+    System --> GUI: Show successful update message
+else If user does not exist
+    System --> GUI: Show user does not exist message
+else If data is invalid
+    System --> GUI: Show invalid data message
+    deactivate System #LightBlue
+    deactivate GUI #LightPink
+end
+
+== Delete User ==
+User --> GUI: Enter user information
+activate User #LightYellow
+User -> GUI: Select delete option
+deactivate User #LightYellow
+GUI --> System: Communicate selection event
+activate GUI #LightPink
+activate System #LightBlue
+GUI -> System: Send information
+alt
+    System -> DB: Delete user
+    activate DB #LightGreen
+    DB --> System: Return result
+    deactivate DB #LightGreen
+    System --> GUI: Show successful deletion message
+else If user does not exist
+    System --> GUI: Show user does not exist message
+else If data is invalid
+    System --> GUI: Show invalid data message
+    deactivate System #LightBlue
+    deactivate GUI #LightPink
+end

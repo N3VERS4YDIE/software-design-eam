@@ -1,0 +1,35 @@
+START TRANSACTION;
+
+-- DROP TABLE IF EXISTS users;
+CREATE TABLE IF NOT EXISTS users (
+  id VARCHAR(320) NOT NULL,
+  password VARCHAR(60) NOT NULL,
+  firstname VARCHAR(30) NOT NULL,
+  lastname VARCHAR(30) NOT NULL,
+  role enum('USER','ADMIN') NOT NULL,
+  salt VARCHAR(60) NOT NULL,
+  PRIMARY KEY (id)
+);
+
+DROP TABLE IF EXISTS books;
+DROP TABLE IF EXISTS genres;
+CREATE TABLE IF NOT EXISTS genres (
+  id INT(3) AUTO_INCREMENT,
+  name VARCHAR(255) NOT NULL,
+  PRIMARY KEY (id)
+);
+
+INSERT INTO genres (name) VALUES ('None');
+
+CREATE TABLE IF NOT EXISTS books (
+  id VARCHAR(17) NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  author VARCHAR(255) NOT NULL,
+  year VARCHAR(7),
+  quantity INT(9) NOT NULL,
+  genre_id INT(3),
+  PRIMARY KEY (id),
+  FOREIGN KEY (genre_id) REFERENCES genres(id)
+);
+
+COMMIT;

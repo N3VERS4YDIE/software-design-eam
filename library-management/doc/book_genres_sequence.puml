@@ -1,0 +1,69 @@
+title Book Genres
+
+actor User #LightYellow
+boundary GUI #LightPink
+control System #LightBlue
+entity DB #LightGreen
+
+== Add Book Genre ==
+User --> GUI: Enter genre information
+activate User #LightYellow
+User -> GUI: Select add option
+deactivate User #LightYellow
+GUI --> System: Communicate selection event
+activate GUI #LightPink
+activate System #LightBlue
+GUI -> System: Send information
+alt
+    System -> DB: Add genre
+    activate DB #LightGreen
+    DB --> System: Return result
+    deactivate DB #LightGreen
+    System --> GUI: Show successful addition message
+else If data is invalid
+    System --> GUI: Show invalid data message
+    deactivate System #LightBlue
+    deactivate GUI #LightPink
+end
+
+== Update Book Genre ==
+User --> GUI: Enter genre information
+activate User #LightYellow
+User -> GUI: Select update option
+deactivate User #LightYellow
+GUI --> System: Communicate selection event
+activate GUI #LightPink
+activate System #LightBlue
+GUI -> System: Send information
+alt
+    System -> DB: Update genre
+    activate DB #LightGreen
+    DB --> System: Return result
+    deactivate DB #LightGreen
+    System --> GUI: Show successful update message
+else If data is invalid
+    System --> GUI: Show invalid data message
+    deactivate System #LightBlue
+    deactivate GUI #LightPink
+end
+
+== Delete Book Genre ==
+User --> GUI: Enter genre information
+activate User #LightYellow
+User -> GUI: Select delete option
+deactivate User #LightYellow
+GUI --> System: Communicate selection event
+activate GUI #LightPink
+activate System #LightBlue
+GUI -> System: Send information
+alt
+    System -> DB: Delete genre
+    activate DB #LightGreen
+    DB --> System: Return result
+    deactivate DB #LightGreen
+    System --> GUI: Show successful deletion message
+else If id is equal to 1
+    System --> GUI: Show cannot delete message
+    deactivate System #LightBlue
+    deactivate GUI #LightPink
+end
