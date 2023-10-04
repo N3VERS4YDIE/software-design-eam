@@ -8,18 +8,19 @@ CREATE TABLE IF NOT EXISTS users (
   lastname VARCHAR(30) NOT NULL,
   role enum('USER','ADMIN') NOT NULL,
   salt VARCHAR(60) NOT NULL,
+
   PRIMARY KEY (id)
 );
 
-DROP TABLE IF EXISTS books;
-DROP TABLE IF EXISTS genres;
+-- DROP TABLE IF EXISTS books;
+-- DROP TABLE IF EXISTS genres;
 CREATE TABLE IF NOT EXISTS genres (
-  id INT(3) AUTO_INCREMENT,
+  id INT(3) NOT NULL AUTO_INCREMENT,
   name VARCHAR(255) NOT NULL,
+
   PRIMARY KEY (id)
 );
-
-INSERT INTO genres (name) VALUES ('None');
+-- INSERT INTO genres (name) VALUES ('None');
 
 CREATE TABLE IF NOT EXISTS books (
   id VARCHAR(17) NOT NULL,
@@ -27,9 +28,24 @@ CREATE TABLE IF NOT EXISTS books (
   author VARCHAR(255) NOT NULL,
   year VARCHAR(7),
   quantity INT(9) NOT NULL,
-  genre_id INT(3),
+  genre_id INT(3) NOT NULL,
+
   PRIMARY KEY (id),
   FOREIGN KEY (genre_id) REFERENCES genres(id)
+);
+
+DROP TABLE IF EXISTS loans;
+CREATE TABLE IF NOT EXISTS transactions (
+  id INT NOT NULL AUTO_INCREMENT,
+  type enum('LOAN','RETURN') NOT NULL,
+  startdate DATE NOT NULL,
+  enddate DATE NOT NULL,
+  user_id VARCHAR(320) NOT NULL,
+  book_id VARCHAR(17) NOT NULL,
+
+  PRIMARY KEY (id),
+  FOREIGN KEY (user_id) REFERENCES users(id),
+  FOREIGN KEY (book_id) REFERENCES books(id)
 );
 
 COMMIT;
