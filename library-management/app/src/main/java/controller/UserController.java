@@ -56,4 +56,8 @@ public class UserController {
     public String getLoggedUserId() {
         return loggedUserId;
     }
+
+    public void setLoggedUserId(String loggedUserId) {
+        this.loggedUserId = loggedUserId;
+    }
 }

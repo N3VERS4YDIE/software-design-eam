@@ -1,9 +1,9 @@
 package view;
 
-import connection.DB;
-import dao.BookDAO;
-import dao.BookGenreDAO;
+import dao.TransactionDAO;
 import java.awt.event.ActionEvent;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -11,44 +11,54 @@ import java.awt.event.MouseEvent;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import javax.swing.ImageIcon;
-import javax.swing.event.ChangeEvent;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.text.JTextComponent;
-import model.BookGenre;
+import util.FieldChecker;
 import util.Message;
 
-public class BookGenresPanel extends javax.swing.JPanel {
+public class TransactionsPanel extends javax.swing.JPanel {
 
-    private BookGenreDAO bookGenreDAO;
+    private TransactionDAO transactionDAO;
     private final ArrayList<JTextComponent> txtFields = new ArrayList<>();
 
-    public BookGenresPanel() {
-        bookGenreDAO = new BookGenreDAO();
-        txtFields.add(txtEmail);
+    public TransactionsPanel() {
+        transactionDAO = TransactionDAO.getInstance();
+        txtFields.add(txtId);
 
         initComponents();
-        initTblBookGenres();
+        initTblTransactions();
         initListeners();
 
-        tblBookGenres.setDefaultEditor(Object.class, null);
+        tblTransactions.setDefaultEditor(Object.class, null);
         tglFilter.setEnabled(false);
         setVisible(true);
     }
 
-    private void initTblBookGenres() {
-        DefaultTableModel tableModel = new DefaultTableModel(new Object[] { "id", "name" }, 0) {
+    private void initTblTransactions() {
+        DefaultTableModel tableModel = new DefaultTableModel(
+            new Object[] { "id", "action", "datetime", "user id", "table", "other id" },
+            0
+        ) {
             @Override
             public Class<?> getColumnClass(int columnIndex) {
                 return String.class;
             }
         };
 
-        tblBookGenres.setModel(tableModel);
+        tblTransactions.setModel(tableModel);
         updateTable();
     }
 
     private void initListeners() {
-        tblBookGenres.addMouseListener(
+        addComponentListener(
+            new ComponentAdapter() {
+                @Override
+                public void componentShown(ComponentEvent evt) {
+                    updateTable();
+                }
+            }
+        );
+        tblTransactions.addMouseListener(
             new MouseAdapter() {
                 @Override
                 public void mouseClicked(MouseEvent e) {
@@ -56,15 +66,13 @@ public class BookGenresPanel extends javax.swing.JPanel {
                 }
             }
         );
-        btnAdd.addActionListener(this::addBookGenre);
-        btnUpdate.addActionListener(this::updateBookGenre);
-        btnDelete.addActionListener(this::deleteBookGenre);
+        btnSearch.addActionListener(this::searchTransaction);
         btnClearFields.addActionListener(this::clearFields);
-        tglFilter.addChangeListener(this::toggleFilter);
+        tglFilter.addChangeListener(e -> toggleFilter());
         txtFilter.addKeyListener(
             new KeyAdapter() {
                 @Override
-                public void keyReleased(KeyEvent evt) {
+                public void keyReleased(KeyEvent e) {
                     checkFilterState();
                 }
             }
@@ -72,53 +80,34 @@ public class BookGenresPanel extends javax.swing.JPanel {
     }
 
     private void updateFieldsWithTable() {
-        final int ROW = tblBookGenres.getSelectedRow();
+        final int ROW = tblTransactions.getSelectedRow();
         if (ROW == -1) {
             return;
         }
-        txtEmail.setText(String.valueOf(tblBookGenres.getValueAt(ROW, 1)));
+        txtId.setText(String.valueOf(tblTransactions.getValueAt(ROW, 0)));
     }
 
-    private void addBookGenre(ActionEvent evt) {
+    private void updateFields() {
         try {
-            checkEmptyFields();
-
-            bookGenreDAO.add(new BookGenre(getGenreName()));
-            updateTable();
-            clearFields(null);
+            ResultSet rs = transactionDAO.findRS(getId());
+            rs.next();
+            txtId.setText(rs.getString("id"));
         } catch (Exception e) {
-            Message.showErrorMessage(this, e.getMessage());
+            e.printStackTrace();
         }
     }
 
-    private void updateBookGenre(ActionEvent evt) {
-        try {
-            checkEmptyFields();
-
-            bookGenreDAO.updateRS(new BookGenre(getId(), getGenreName()));
-            updateTable();
-            clearFields(null);
-        } catch (Exception e) {
-            Message.showErrorMessage(this, e.getMessage());
-        }
-    }
-
-    private void deleteBookGenre(ActionEvent evt) {
-        if (getId().equals("1")) {
-            Message.showWarningMessage(this, "This is the default genre and cannot be deleted");
+    private void searchTransaction(ActionEvent evt) {
+        if (getId().isEmpty()) {
             return;
         }
         try {
-            DB
-                .getInstance()
-                .prepareStatement(
-                    String.format("UPDATE %s SET genre_id = 1 WHERE genre_id = %s", new BookDAO().tableName, getId())
-                )
-                .executeUpdate();
-            bookGenreDAO.delete(getId());
-            updateTable();
-            clearFields(null);
+            FieldChecker.checkNonExistence(transactionDAO.findRS(getId()));
+            updateFields();
         } catch (Exception e) {
+            String auxIdText = getId();
+            clearFields(null);
+            txtId.setText(auxIdText);
             Message.showErrorMessage(this, e.getMessage());
         }
     }
@@ -129,7 +118,7 @@ public class BookGenresPanel extends javax.swing.JPanel {
         }
     }
 
-    private void toggleFilter(ChangeEvent evt) {
+    private void toggleFilter() {
         if (tglFilter.isSelected()) {
             try {
                 updateTable();
@@ -149,34 +138,34 @@ public class BookGenresPanel extends javax.swing.JPanel {
     }
 
     private void updateTable() {
-        DefaultTableModel tableModel = (DefaultTableModel) tblBookGenres.getModel();
+        DefaultTableModel tableModel = (DefaultTableModel) tblTransactions.getModel();
         tableModel.setRowCount(0);
         try {
             if (tglFilter.isSelected()) {
-                ResultSet rs = bookGenreDAO.filterRS("id, name", getFilter());
-                updateTable(rs);
+                updateTable(transactionDAO.filterRS("type, datetime, user_id, tablename, other_id", getFilter()));
             } else {
-                updateTable(bookGenreDAO.allRS());
+                updateTable(transactionDAO.allRS());
             }
         } catch (Exception e) {
-            Message.showErrorMessage(this, e.getMessage());
+            e.printStackTrace();
         }
     }
 
-    private void checkEmptyFields() {
-        for (JTextComponent field : txtFields) {
-            if (field.getText().isEmpty()) {
-                throw new IllegalArgumentException("Empty fields are not allowed");
-            }
-        }
-    }
-
-    private void updateTable(ResultSet user) {
-        DefaultTableModel tableModel = (DefaultTableModel) tblBookGenres.getModel();
+    private void updateTable(ResultSet transaction) {
+        DefaultTableModel tableModel = (DefaultTableModel) tblTransactions.getModel();
         tableModel.setRowCount(0);
         try {
-            while (user.next()) {
-                tableModel.addRow(new Object[] { user.getString(1), user.getString(2) });
+            while (transaction.next()) {
+                tableModel.addRow(
+                    new Object[] {
+                        transaction.getString(1),
+                        transaction.getString(2),
+                        transaction.getString(3),
+                        transaction.getString(4),
+                        transaction.getString(5),
+                        transaction.getString(6),
+                    }
+                );
             }
         } catch (Exception e) {
             Message.showErrorMessage(this, e.getMessage());
@@ -184,11 +173,7 @@ public class BookGenresPanel extends javax.swing.JPanel {
     }
 
     private String getId() {
-        return tblBookGenres.getValueAt(tblBookGenres.getSelectedRow(), 0).toString();
-    }
-
-    private String getGenreName() {
-        return txtEmail.getText().trim();
+        return txtId.getText().trim();
     }
 
     private String getFilter() {
@@ -212,32 +197,15 @@ public class BookGenresPanel extends javax.swing.JPanel {
         lbl6 = new javax.swing.JLabel();
 
         lbl1.setFont(new java.awt.Font("Segoe UI", 0, 16)); // NOI18N
-        lbl1.setText("name");
+        lbl1.setText("id");
 
-        txtEmail.setFont(new java.awt.Font("Segoe UI", 0, 16)); // NOI18N
+        txtId.setFont(new java.awt.Font("Segoe UI", 0, 16)); // NOI18N
 
-        jPanel1.setLayout(new java.awt.GridLayout(0, 2, 10, 10));
+        btnSearch.setFont(new java.awt.Font("Segoe UI", 0, 16)); // NOI18N
+        btnSearch.setIcon(new javax.swing.ImageIcon(getClass().getResource("/search.png"))); // NOI18N
+        btnSearch.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
 
-        btnAdd.setFont(new java.awt.Font("Segoe UI", 0, 16)); // NOI18N
-        btnAdd.setIcon(new javax.swing.ImageIcon(getClass().getResource("/add.png"))); // NOI18N
-        btnAdd.setText("Add");
-        btnAdd.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
-        btnAdd.setHorizontalTextPosition(javax.swing.SwingConstants.LEADING);
-        jPanel1.add(btnAdd);
-
-        btnUpdate.setFont(new java.awt.Font("Segoe UI", 0, 16)); // NOI18N
-        btnUpdate.setIcon(new javax.swing.ImageIcon(getClass().getResource("/update.png"))); // NOI18N
-        btnUpdate.setText("Update");
-        btnUpdate.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
-        btnUpdate.setHorizontalTextPosition(javax.swing.SwingConstants.LEADING);
-        jPanel1.add(btnUpdate);
-
-        btnDelete.setFont(new java.awt.Font("Segoe UI", 0, 16)); // NOI18N
-        btnDelete.setIcon(new javax.swing.ImageIcon(getClass().getResource("/delete.png"))); // NOI18N
-        btnDelete.setText("Delete");
-        btnDelete.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
-        btnDelete.setHorizontalTextPosition(javax.swing.SwingConstants.LEADING);
-        jPanel1.add(btnDelete);
+        jPanel1.setLayout(new java.awt.GridLayout(0, 1, 10, 10));
 
         btnClearFields.setFont(new java.awt.Font("Segoe UI", 0, 16)); // NOI18N
         btnClearFields.setIcon(new javax.swing.ImageIcon(getClass().getResource("/clear.png"))); // NOI18N
@@ -251,28 +219,24 @@ public class BookGenresPanel extends javax.swing.JPanel {
         pnlPropsLayout.setHorizontalGroup(
             pnlPropsLayout
                 .createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                .addComponent(txtEmail)
                 .addGroup(
                     pnlPropsLayout
                         .createSequentialGroup()
                         .addGroup(
                             pnlPropsLayout
                                 .createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                .addGroup(
-                                    pnlPropsLayout
-                                        .createSequentialGroup()
-                                        .addComponent(lbl1)
-                                        .addGap(0, 0, Short.MAX_VALUE)
-                                )
-                                .addComponent(
-                                    jPanel1,
-                                    javax.swing.GroupLayout.Alignment.TRAILING,
-                                    javax.swing.GroupLayout.DEFAULT_SIZE,
-                                    410,
-                                    Short.MAX_VALUE
-                                )
+                                .addComponent(lbl1)
+                                .addComponent(txtId, javax.swing.GroupLayout.DEFAULT_SIZE, 379, Short.MAX_VALUE)
                         )
-                        .addContainerGap()
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(btnSearch)
+                )
+                .addComponent(
+                    jPanel1,
+                    javax.swing.GroupLayout.Alignment.TRAILING,
+                    javax.swing.GroupLayout.DEFAULT_SIZE,
+                    javax.swing.GroupLayout.DEFAULT_SIZE,
+                    Short.MAX_VALUE
                 )
         );
         pnlPropsLayout.setVerticalGroup(
@@ -284,29 +248,34 @@ public class BookGenresPanel extends javax.swing.JPanel {
                         .addContainerGap()
                         .addComponent(lbl1)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(
-                            txtEmail,
-                            javax.swing.GroupLayout.PREFERRED_SIZE,
-                            javax.swing.GroupLayout.DEFAULT_SIZE,
-                            javax.swing.GroupLayout.PREFERRED_SIZE
+                        .addGroup(
+                            pnlPropsLayout
+                                .createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                .addComponent(
+                                    txtId,
+                                    javax.swing.GroupLayout.PREFERRED_SIZE,
+                                    javax.swing.GroupLayout.DEFAULT_SIZE,
+                                    javax.swing.GroupLayout.PREFERRED_SIZE
+                                )
+                                .addComponent(btnSearch)
                         )
                         .addGap(18, 18, 18)
                         .addComponent(
                             jPanel1,
                             javax.swing.GroupLayout.PREFERRED_SIZE,
-                            80,
+                            35,
                             javax.swing.GroupLayout.PREFERRED_SIZE
                         )
-                        .addContainerGap(374, Short.MAX_VALUE)
+                        .addContainerGap(413, Short.MAX_VALUE)
                 )
         );
 
         spp.setLeftComponent(pnlProps);
 
-        tblBookGenres.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
-        tblBookGenres.setModel(new javax.swing.table.DefaultTableModel(new Object[][] {}, new String[] {}));
-        tblBookGenres.setShowGrid(true);
-        jScrollPane1.setViewportView(tblBookGenres);
+        tblTransactions.setFont(new java.awt.Font("Segoe UI", 0, 14)); // NOI18N
+        tblTransactions.setModel(new javax.swing.table.DefaultTableModel(new Object[][] {}, new String[] {}));
+        tblTransactions.setShowGrid(true);
+        jScrollPane1.setViewportView(tblTransactions);
 
         txtFilter.setFont(new java.awt.Font("Segoe UI", 0, 16)); // NOI18N
 
@@ -388,10 +357,8 @@ public class BookGenresPanel extends javax.swing.JPanel {
     } // </editor-fold>//GEN-END:initComponents
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private final javax.swing.JButton btnAdd = new javax.swing.JButton();
     private final javax.swing.JButton btnClearFields = new javax.swing.JButton();
-    private final javax.swing.JButton btnDelete = new javax.swing.JButton();
-    private final javax.swing.JButton btnUpdate = new javax.swing.JButton();
+    private final javax.swing.JButton btnSearch = new javax.swing.JButton();
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JScrollPane jScrollPane1;
@@ -399,10 +366,10 @@ public class BookGenresPanel extends javax.swing.JPanel {
     private javax.swing.JLabel lbl6;
     private javax.swing.JPanel pnlProps;
     private javax.swing.JSplitPane spp;
-    private final javax.swing.JTable tblBookGenres = new javax.swing.JTable();
+    private final javax.swing.JTable tblTransactions = new javax.swing.JTable();
     private final javax.swing.JToggleButton tglFilter = new javax.swing.JToggleButton();
-    private final javax.swing.JTextField txtEmail = new javax.swing.JTextField();
     private final javax.swing.JTextField txtFilter = new javax.swing.JTextField();
+    private final javax.swing.JTextField txtId = new javax.swing.JTextField();
     // End of variables declaration//GEN-END:variables
 
 }

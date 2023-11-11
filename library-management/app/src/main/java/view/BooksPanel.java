@@ -1,8 +1,9 @@
 package view;
 
-import connection.DB;
+import controller.UserController;
 import dao.BookDAO;
 import dao.BookGenreDAO;
+import dao.BorrowDAO;
 import java.awt.event.ActionEvent;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
@@ -11,6 +12,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.sql.ResultSet;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Calendar;
 import javax.swing.ImageIcon;
@@ -18,6 +20,7 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.text.JTextComponent;
 import model.Book;
 import model.BookFilter;
+import model.Borrow;
 import util.FieldChecker;
 import util.Message;
 
@@ -25,11 +28,15 @@ public class BooksPanel extends javax.swing.JPanel {
 
     private BookDAO bookDAO;
     private BookGenreDAO bookGenreDAO;
+    private BorrowDAO transactionDAO;
+    private UserController userController;
     private final ArrayList<JTextComponent> txtFields = new ArrayList<>();
 
     public BooksPanel() {
         bookDAO = new BookDAO();
         bookGenreDAO = new BookGenreDAO();
+        transactionDAO = BorrowDAO.getInstance();
+        userController = UserController.getInstance();
         txtFields.add(txtIsbn);
         txtFields.add(txtTitle);
         txtFields.add(txtAuthor);
@@ -39,8 +46,10 @@ public class BooksPanel extends javax.swing.JPanel {
         initCmbYear();
         initCmbFilters();
         initCmbGenre();
+        initCmbDate();
         initListeners();
 
+        tblBooks.setDefaultEditor(Object.class, null);
         tglFilter.setEnabled(false);
         setVisible(true);
     }
@@ -90,6 +99,14 @@ public class BooksPanel extends javax.swing.JPanel {
         }
     }
 
+    private void initCmbDate() {
+        cmbDate.removeAllItems();
+        LocalDate currentDate = LocalDate.now();
+        for (int i = 0; i < 30; i++) {
+            cmbDate.addItem(currentDate.plusDays(i).toString());
+        }
+    }
+
     private void initListeners() {
         addComponentListener(
             new ComponentAdapter() {
@@ -115,6 +132,7 @@ public class BooksPanel extends javax.swing.JPanel {
         btnDelete.addActionListener(this::deleteBook);
         btnSearch.addActionListener(this::searchBook);
         btnClearFields.addActionListener(this::clearFields);
+        btnBorrow.addActionListener(this::borrowBook);
         cmbFilter.addItemListener(e -> {
             if (e.getStateChange() == 1) {
                 toggleFilter();
@@ -219,6 +237,23 @@ public class BooksPanel extends javax.swing.JPanel {
         spnQuantity.setValue(0);
     }
 
+    private void borrowBook(ActionEvent evt) {
+        try {
+            FieldChecker.checkNonExistence(bookDAO.findRS(getId()));
+            Borrow transaction = new Borrow(
+                LocalDate.now(),
+                LocalDate.parse(cmbDate.getSelectedItem().toString()),
+                userController.getLoggedUserId(),
+                getId()
+            );
+            transactionDAO.borrowBook(transaction);
+            updateTable();
+            clearFields(null);
+        } catch (Exception e) {
+            Message.showErrorMessage(this, e.getMessage());
+        }
+    }
+
     private void toggleFilter() {
         if (tglFilter.isSelected()) {
             try {
@@ -238,20 +273,6 @@ public class BooksPanel extends javax.swing.JPanel {
         tglFilter.setSelected(false);
     }
 
-    private ResultSet filter(String condition) {
-        String selectQuery = String.format(
-            "SELECT B.id, B.title, B.author, B.year, B.quantity, G.name FROM %s B INNER JOIN %s G ON B.genre_id = G.id ",
-            bookDAO.tableName,
-            bookGenreDAO.tableName
-        );
-        try {
-            return DB.getInstance().prepareStatement(selectQuery + condition).executeQuery();
-        } catch (Exception e) {
-            Message.showErrorMessage(this, e.getMessage());
-            return null;
-        }
-    }
-
     private void updateTable() {
         DefaultTableModel tableModel = (DefaultTableModel) tblBooks.getModel();
         tableModel.setRowCount(0);
@@ -261,33 +282,32 @@ public class BooksPanel extends javax.swing.JPanel {
                 switch ((BookFilter) cmbFilter.getSelectedItem()) {
                     case ALL:
                         rs =
-                            filter(
+                            bookDAO.filterRS(
                                 String.format(
-                                    "WHERE CONCAT(B.title, B.author, B.year, G.name) LIKE '%%%s%%' OR B.quantity = '%s'",
-                                    getFilter(),
+                                    "CONCAT(B.id, B.title, B.author, B.year, B.quantity, G.name) LIKE '%%%s%%'",
                                     getFilter()
                                 )
                             );
                         break;
                     case TITLE:
-                        rs = filter(String.format("WHERE B.title LIKE '%%%s%%' ORDER BY B.title", getFilter()));
+                        rs = bookDAO.filterRS(String.format("B.title LIKE '%%%s%%' ORDER BY B.title", getFilter()));
                         break;
                     case AUTHOR:
-                        rs = filter(String.format("WHERE B.author LIKE '%%%s%%' ORDER BY B.author", getFilter()));
+                        rs = bookDAO.filterRS(String.format("B.author LIKE '%%%s%%' ORDER BY B.author", getFilter()));
                         break;
                     case YEAR:
-                        rs = filter(String.format("WHERE B.year LIKE '%%%s%%' ORDER BY B.year DESC", getFilter()));
+                        rs = bookDAO.filterRS(String.format("B.year LIKE '%%%s%%' ORDER BY B.year DESC", getFilter()));
                         break;
                     case QUANTITY:
-                        rs = filter(String.format("WHERE B.quantity = '%s'", getFilter()));
+                        rs = bookDAO.filterRS(String.format("B.quantity = '%s'", getFilter()));
                         break;
                     case GENRE:
-                        rs = filter(String.format("WHERE G.name LIKE '%%%s%%' ORDER BY G.name", getFilter()));
+                        rs = bookDAO.filterRS(String.format("G.name LIKE '%%%s%%' ORDER BY G.name", getFilter()));
                         break;
                 }
                 updateTable(rs);
             } else {
-                updateTable(filter(""));
+                updateTable(bookDAO.allRS());
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -375,6 +395,10 @@ public class BooksPanel extends javax.swing.JPanel {
         lbl8 = new javax.swing.JLabel();
         lbl9 = new javax.swing.JLabel();
         spnQuantity = new javax.swing.JSpinner();
+        jSeparator1 = new javax.swing.JSeparator();
+        lbl4 = new javax.swing.JLabel();
+        cmbDate = new javax.swing.JComboBox<>();
+        lbl5 = new javax.swing.JLabel();
         jPanel2 = new javax.swing.JPanel();
         jScrollPane1 = new javax.swing.JScrollPane();
         lbl6 = new javax.swing.JLabel();
@@ -442,6 +466,21 @@ public class BooksPanel extends javax.swing.JPanel {
         lbl9.setFont(new java.awt.Font("Segoe UI", 0, 16)); // NOI18N
         lbl9.setText("quantity");
 
+        btnBorrow.setFont(new java.awt.Font("Segoe UI", 0, 16)); // NOI18N
+        btnBorrow.setIcon(new javax.swing.ImageIcon(getClass().getResource("/borrow.png"))); // NOI18N
+        btnBorrow.setText("Borrow");
+        btnBorrow.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        btnBorrow.setHorizontalTextPosition(javax.swing.SwingConstants.LEADING);
+        btnBorrow.setPreferredSize(new java.awt.Dimension(90, 35));
+
+        lbl4.setFont(new java.awt.Font("Segoe UI", 0, 16)); // NOI18N
+        lbl4.setText("return date");
+
+        cmbDate.setFont(new java.awt.Font("Segoe UI", 0, 16)); // NOI18N
+
+        lbl5.setFont(new java.awt.Font("Segoe UI", 1, 16)); // NOI18N
+        lbl5.setText("Borrow a book");
+
         javax.swing.GroupLayout pnlPropsLayout = new javax.swing.GroupLayout(pnlProps);
         pnlProps.setLayout(pnlPropsLayout);
         pnlPropsLayout.setHorizontalGroup(
@@ -460,7 +499,6 @@ public class BooksPanel extends javax.swing.JPanel {
                         .addComponent(btnSearch)
                 )
                 .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, 416, Short.MAX_VALUE)
-                .addGroup(pnlPropsLayout.createSequentialGroup().addComponent(lbl8).addGap(0, 0, Short.MAX_VALUE))
                 .addComponent(txtAuthor)
                 .addComponent(
                     cmbYear,
@@ -471,12 +509,23 @@ public class BooksPanel extends javax.swing.JPanel {
                 )
                 .addComponent(txtTitle)
                 .addComponent(spnQuantity)
+                .addComponent(jSeparator1)
+                .addGroup(pnlPropsLayout.createSequentialGroup().addComponent(lbl8).addGap(0, 389, Short.MAX_VALUE))
                 .addGroup(
                     pnlPropsLayout
                         .createSequentialGroup()
                         .addGroup(
                             pnlPropsLayout
                                 .createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                .addComponent(cmbGenre, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addComponent(
+                                    btnBorrow,
+                                    javax.swing.GroupLayout.Alignment.TRAILING,
+                                    javax.swing.GroupLayout.DEFAULT_SIZE,
+                                    javax.swing.GroupLayout.DEFAULT_SIZE,
+                                    Short.MAX_VALUE
+                                )
+                                .addComponent(cmbDate, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                 .addGroup(
                                     pnlPropsLayout
                                         .createSequentialGroup()
@@ -487,12 +536,18 @@ public class BooksPanel extends javax.swing.JPanel {
                                                 .addComponent(lbl3)
                                                 .addComponent(lbl7)
                                                 .addComponent(lbl9)
+                                                .addComponent(lbl4)
                                         )
                                         .addGap(0, 0, Short.MAX_VALUE)
                                 )
-                                .addComponent(cmbGenre, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                         )
                         .addContainerGap()
+                )
+                .addComponent(
+                    lbl5,
+                    javax.swing.GroupLayout.DEFAULT_SIZE,
+                    javax.swing.GroupLayout.DEFAULT_SIZE,
+                    Short.MAX_VALUE
                 )
         );
         pnlPropsLayout.setVerticalGroup(
@@ -567,7 +622,32 @@ public class BooksPanel extends javax.swing.JPanel {
                             80,
                             javax.swing.GroupLayout.PREFERRED_SIZE
                         )
-                        .addContainerGap(29, Short.MAX_VALUE)
+                        .addGap(18, 18, 18)
+                        .addComponent(
+                            jSeparator1,
+                            javax.swing.GroupLayout.PREFERRED_SIZE,
+                            10,
+                            javax.swing.GroupLayout.PREFERRED_SIZE
+                        )
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(lbl5)
+                        .addGap(18, 18, 18)
+                        .addComponent(lbl4)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(
+                            cmbDate,
+                            javax.swing.GroupLayout.PREFERRED_SIZE,
+                            javax.swing.GroupLayout.DEFAULT_SIZE,
+                            javax.swing.GroupLayout.PREFERRED_SIZE
+                        )
+                        .addGap(18, 18, 18)
+                        .addComponent(
+                            btnBorrow,
+                            javax.swing.GroupLayout.PREFERRED_SIZE,
+                            javax.swing.GroupLayout.DEFAULT_SIZE,
+                            javax.swing.GroupLayout.PREFERRED_SIZE
+                        )
+                        .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 )
         );
 
@@ -651,7 +731,7 @@ public class BooksPanel extends javax.swing.JPanel {
                                 )
                         )
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                        .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 473, Short.MAX_VALUE)
+                        .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 624, Short.MAX_VALUE)
                         .addContainerGap()
                 )
         );
@@ -674,19 +754,24 @@ public class BooksPanel extends javax.swing.JPanel {
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     private final javax.swing.JButton btnAdd = new javax.swing.JButton();
+    private final javax.swing.JButton btnBorrow = new javax.swing.JButton();
     private final javax.swing.JButton btnClearFields = new javax.swing.JButton();
     private final javax.swing.JButton btnDelete = new javax.swing.JButton();
     private final javax.swing.JButton btnSearch = new javax.swing.JButton();
     private final javax.swing.JButton btnUpdate = new javax.swing.JButton();
+    private javax.swing.JComboBox<String> cmbDate;
     private javax.swing.JComboBox<BookFilter> cmbFilter;
     private javax.swing.JComboBox<String> cmbGenre;
     private javax.swing.JComboBox<String> cmbYear;
     private javax.swing.JPanel jPanel1;
     private javax.swing.JPanel jPanel2;
     private javax.swing.JScrollPane jScrollPane1;
+    private javax.swing.JSeparator jSeparator1;
     private javax.swing.JLabel lbl1;
     private javax.swing.JLabel lbl2;
     private javax.swing.JLabel lbl3;
+    private javax.swing.JLabel lbl4;
+    private javax.swing.JLabel lbl5;
     private javax.swing.JLabel lbl6;
     private javax.swing.JLabel lbl7;
     private javax.swing.JLabel lbl8;

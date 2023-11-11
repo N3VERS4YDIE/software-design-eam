@@ -16,39 +16,19 @@ import view.LoginView;
  */
 public class App {
 
-    public static void main(String[] args) throws SQLException {
+    public static void main(String[] args) {
         FlatMacDarkLaf.setup();
         EventQueue.invokeLater(LoginView::new);
-
-        try {
-            App app = new App();
-            app.setAdmin();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        // String salt = BCrypt.gensalt();
-        // String password = PasswordController.hashPassword("san", salt);
-        // new UserDAO().add(new User("san", password, "", "", Role.ADMIN, salt));
-
-        // ResultSet rs = new UserDAO().allRS();
-        // ResultSetMetaData rsmd = rs.getMetaData();
-        // int columnsNumber = rsmd.getColumnCount();
-        // while (rs.next()) {
-        //     for (int i = 1; i <= columnsNumber; i++) {
-        //         if (i > 1) System.out.print(" | ");
-        //         System.out.print(rs.getString(i));
-        //     }
-        //     System.out.println("");
-        // }
+        setAdmin();
     }
 
-    private void setAdmin() throws SQLException {
+    private static void setAdmin() {
         try {
             final ResultSet rs = new UserDAO().findRS("admin");
             if (!rs.next()) {
                 new UserDAO().add(new User("admin", "admin", "", "", Role.ADMIN, null));
             }
-        } catch (NoSuchElementException e) {
+        } catch (NoSuchElementException | SQLException e) {
             e.printStackTrace();
         }
     }

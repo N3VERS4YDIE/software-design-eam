@@ -1,15 +1,12 @@
 package view;
 
+import controller.UserController;
 import dao.UserDAO;
 import java.awt.event.ActionEvent;
 import model.Role;
 import model.User;
 import util.Message;
 
-/**
- *
- * @author Santiago Palacio Vásquez
- */
 public class RegisterPanel extends javax.swing.JPanel {
 
     private LoginView loginView;
@@ -37,6 +34,7 @@ public class RegisterPanel extends javax.swing.JPanel {
             return;
         }
         try {
+            UserController.getInstance().setLoggedUserId(txtId.getText().trim());
             new UserDAO()
                 .add(
                     new User(
@@ -62,7 +60,7 @@ public class RegisterPanel extends javax.swing.JPanel {
         this.password.setText(password);
     }
 
-    private void cancel(java.awt.event.ActionEvent evt) {
+    private void cancel(ActionEvent evt) {
         loginView.showLoginPanel();
     }
 

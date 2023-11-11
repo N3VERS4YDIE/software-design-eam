@@ -13,7 +13,7 @@ public class UserDAO extends DAO<User> {
     }
 
     @Override
-    public boolean add(User user) throws SQLException, IllegalArgumentException {
+    public boolean add(User user) throws SQLException {
         FieldChecker.checkEmail(user.getId());
         FieldChecker.checkName(user.getFirstname());
         FieldChecker.checkName(user.getLastname());
@@ -22,13 +22,19 @@ public class UserDAO extends DAO<User> {
         final String HASHED_PASSWORD = PasswordHasher.hashPassword(user.getPassword(), SALT);
         user.setPassword(HASHED_PASSWORD);
         user.setSalt(SALT);
+
         return super.add(user);
     }
 
     @Override
-    public boolean updateRS(User user) throws SQLException, IllegalArgumentException {
+    public boolean updateRS(User user) throws SQLException {
         FieldChecker.checkName(user.getFirstname());
         FieldChecker.checkName(user.getLastname());
+
+        final String SALT = user.getSalt();
+        final String HASHED_PASSWORD = PasswordHasher.hashPassword(user.getPassword(), SALT);
+        user.setPassword(HASHED_PASSWORD);
+
         return super.updateRS(user);
     }
 }

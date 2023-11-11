@@ -25,6 +25,12 @@ public class FieldChecker {
         }
     }
 
+        public static void checkExistence(ResultSet rs, String msg) throws SQLException {
+        if (rs.next()) {
+            throw new IllegalArgumentException(msg);
+        }
+    }
+
     public static void checkNonExistence(ResultSet rs) throws SQLException {
         if (!rs.next()) {
             throw new IllegalArgumentException("Does not exist");

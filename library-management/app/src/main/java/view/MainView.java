@@ -3,23 +3,22 @@ package view;
 import java.awt.Dimension;
 import java.awt.EventQueue;
 
-/**
- *
- * @author Santiago Palacio Vásquez
- */
 public class MainView extends javax.swing.JFrame {
 
     public MainView() {
         initComponents();
         setTitle("Library Management");
-        setMinimumSize(new Dimension(1111, 666));
-        setPreferredSize(new Dimension(1280, 666));
+        setMinimumSize(new Dimension(1111, 800));
+        setPreferredSize(new Dimension(1280, 800));
         setSize(getPreferredSize());
         setLocationRelativeTo(null);
 
         tbpMain.addTab("Users", new UsersPanel(this));
         tbpMain.addTab("Books", new BooksPanel());
+        tbpMain.addTab("My Books", new BorrowedBooks());
         tbpMain.addTab("Book Genres", new BookGenresPanel());
+        tbpMain.addTab("Transactions", new TransactionsPanel());
+        tbpMain.addTab("Reports", new ReportsPanel());
 
         setVisible(true);
     }

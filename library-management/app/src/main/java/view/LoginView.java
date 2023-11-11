@@ -2,10 +2,6 @@ package view;
 
 import java.awt.EventQueue;
 
-/**
- *
- * @author Santiago Palacio Vásquez
- */
 public class LoginView extends javax.swing.JFrame {
 
     private final LoginPanel loginPanel;

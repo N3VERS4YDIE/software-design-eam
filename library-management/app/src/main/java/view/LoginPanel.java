@@ -4,10 +4,6 @@ import controller.UserController;
 import java.awt.event.ActionEvent;
 import util.Message;
 
-/**
- *
- * @author Santiago Palacio Vásquez
- */
 public class LoginPanel extends javax.swing.JPanel {
 
     private final LoginView loginView;

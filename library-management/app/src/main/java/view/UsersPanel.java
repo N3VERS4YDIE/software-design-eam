@@ -1,6 +1,5 @@
 package view;
 
-import connection.DB;
 import controller.UserController;
 import dao.UserDAO;
 import java.awt.event.ActionEvent;
@@ -40,6 +39,7 @@ public class UsersPanel extends javax.swing.JPanel {
         initCmbRole();
         initListeners();
 
+        tblUsers.setDefaultEditor(Object.class, null);
         tglFilter.setEnabled(false);
         setVisible(true);
     }
@@ -214,16 +214,7 @@ public class UsersPanel extends javax.swing.JPanel {
         tableModel.setRowCount(0);
         try {
             if (tglFilter.isSelected()) {
-                String query = String.format(
-                    "SELECT * FROM %s WHERE id LIKE '%%%s%%' OR firstname LIKE '%%%s%%' OR lastname LIKE '%%%s%%' OR role LIKE '%%%s%%'",
-                    userDAO.tableName,
-                    getFilter(),
-                    getFilter(),
-                    getFilter(),
-                    getFilter()
-                );
-                ResultSet rs = DB.getInstance().prepareStatement(query).executeQuery();
-                updateTable(rs);
+                updateTable(userDAO.filterRS("id, firstname, lastname, role", getFilter()));
             } else {
                 updateTable(userDAO.allRS());
             }
